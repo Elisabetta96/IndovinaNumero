@@ -2,6 +2,8 @@ package it.polito.tdp.numero;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+
+import it.polito.tdp.numero.model.NumeroModel;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextArea;
@@ -9,13 +11,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 
 public class NumeroController {
-
-	private final int NMAX = 100;
-	private final int TMAX = 8;
-
-	private int segreto;
-	private int tentativiFatti;
-	private boolean inGioco = false;
+	
+	private NumeroModel model;
 
 	@FXML
 	private ResourceBundle resources;
@@ -45,25 +42,29 @@ public class NumeroController {
 		// Gestisce l'inizio di una nuova partita
 
 		// Logica del gioco
-		this.segreto = (int) (Math.random() * NMAX) + 1;
-		this.tentativiFatti = 0;
-		this.inGioco = true;
-
-		// Gestione dell'interfaccia
+		// non c è più, va fatta nel model
+		
+		// Gestione dell'interfaccia 
+		//RIMANE OVVIAMENTE !! 
 		boxControllopartita.setDisable(true);
 		boxControlloTentativi.setDisable(false);
 		txtMessaggi.clear();
-		txtRimasti.setText(Integer.toString(this.TMAX));
+		this.txtTentativo.clear();
+		txtRimasti.setText(Integer.toString(model.getTMAX()));
+		
+		//non cominciamo più noi la partita, lo devo dire al modello!
+		model.newGame();
 
 	}
 
 	@FXML
 	void handleProvaTentativo(ActionEvent event) {
 
-		// Leggi il valore del tentativo
+		// Leggi il valore del tentativo 
+		//Si, perchè è un valore che leggo dall'interfaccia 
 		String ts = txtTentativo.getText();
 
-		// Controlla se è valido
+		// Controlla se è valido. è un controllo di tipo. Rimane qua,perchè il modello richiede un parametro di tipo giusto.
 
 		int tentativo ;
 		try {
@@ -73,45 +74,55 @@ public class NumeroController {
 			txtMessaggi.appendText("Non è un numero valido\n");
 			return ;
 		}
+		// potrei comunque per sicurezza controllare anche se il numero inserito è corretto 
+		// non lo controlla già il metodo che richiamerò??? si ! è un controllo aggiuntivo 
+		// quello che cambia è che qui posso fare un append text aggiuntivo visto che lavoro sull' interfaccia 
 		
-
-		tentativiFatti++ ;
+		if(!model.tentativoValido(tentativo)) {
+			txtMessaggi.appendText("Range non valido \n");
+			return;
+		}
 		
-		// Controlla se ha indovinato
-		// -> fine partita
-		if(tentativo==segreto) {
-			txtMessaggi.appendText("Complimenti, hai indovinato in "+tentativiFatti+" tentativi\n");
-			
+		int risultato= model.tentativo(tentativo);
+		if(risultato==0){
+			txtMessaggi.appendText("Complimenti, hai indovinato in "+model.getTentativiFatti()+" tentativi\n");
 			boxControllopartita.setDisable(false);
 			boxControlloTentativi.setDisable(true);
-			this.inGioco=false ;
-			return ;
-		}
-
-		// Verifica se ha esaurito i tentativi
-		// -> fine partita
-		if(tentativiFatti==TMAX) {
-			txtMessaggi.appendText("Hai PERSO, il numero segreto era: "+segreto+"\n");
 			
-			boxControllopartita.setDisable(false);
-			boxControlloTentativi.setDisable(true);
-			this.inGioco=false ;
-			return ;
-
+			// non ci serve perchè il modello gia lo fa 
+			//model.endGame();
+			
 		}
-
-		// Informa se era troppo alto/troppo basso
-		// -> stampa messaggio
-		if(tentativo<segreto) {
+		else if (risultato<0) {
 			txtMessaggi.appendText("Tentativo troppo BASSO\n");
-		} else {
+			
+		}else {
 			txtMessaggi.appendText("Tentativo troppo ALTO\n");
-		}
+			}
+	
 
 		// Aggiornare interfaccia con n. tentativi rimasti
-		txtRimasti.setText(Integer.toString(TMAX-tentativiFatti));
-
+		
+       this.txtRimasti.setText(Integer.toString(model.getTMAX()-model.getTentativiFatti())); 
+       
+       //devo anche vedere se ho esauito le variabili
+       //chiedo lo stato della partita al controller
+       
+       if(!model.isInGioco()) {
+    	   //la partita è finita, due casi : ho indovinato ( abbiamo gia il messaggio ) 
+    	   // 2 in caso in cui ho finito i tentativi,ho bisogno di una stamopa 
+    	   if(risultato!=0) {
+    		   this.txtMessaggi.appendText("Hai perso!");
+    		   this.txtMessaggi.appendText(String.format("\n il numero segreto era : %d",model.getSegreto()));
+    		   boxControllopartita.setDisable(false);
+   			boxControlloTentativi.setDisable(true);
+    	   }
+       }
+       
+       
 	}
+        
+	
 
 	@FXML
 	void initialize() {
@@ -122,4 +133,9 @@ public class NumeroController {
 		assert txtMessaggi != null : "fx:id=\"txtMessaggi\" was not injected: check your FXML file 'Numero.fxml'.";
 
 	}
+	
+	public void setModel(NumeroModel model) {
+		this.model = model;
+	}
+
 }
